@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Human Activity Detection</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, #243b55, transparent 35%),
+                radial-gradient(circle at bottom right, #141e30, transparent 40%),
+                #080b12;
+            color: #ffffff;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        header h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        header p {
+            color: #aeb8c7;
+            font-size: 17px;
+        }
+
+        .card {
+            background: rgba(20, 25, 35, 0.88);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+        }
+
+        .upload-area {
+            border: 2px dashed #52637a;
+            border-radius: 16px;
+            padding: 45px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+
+        .upload-area:hover {
+            border-color: #7da2ff;
+            background: rgba(125,162,255,0.05);
+        }
+
+        .upload-icon {
+            font-size: 55px;
+            margin-bottom: 15px;
+        }
+
+        .upload-area h2 {
+            margin-bottom: 8px;
+        }
+
+        .upload-area p {
+            color: #9da8b8;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            color: #8db4ff;
+            margin-top: 15px;
+            word-break: break-word;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #4169e1;
+            color: white;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #3156c7;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background: #444c59;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #b8c7e8;
+        }
+
+        .spinner {
+            width: 35px;
+            height: 35px;
+            border: 4px solid #394252;
+            border-top: 4px solid #7da2ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .result {
+            display: none;
+        }
+
+        .prediction {
+            text-align: center;
+            padding: 25px;
+            border-radius: 16px;
+            background: rgba(65,105,225,0.12);
+            border: 1px solid rgba(125,162,255,0.2);
+            margin-bottom: 25px;
+        }
+
+        .prediction-label {
+            color: #aeb8c7;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+
+        .activity {
+            font-size: 38px;
+            font-weight: bold;
+            color: #8db4ff;
+            margin-bottom: 8px;
+        }
+
+        .confidence {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 18px;
+        }
+
+        .probability {
+            margin-bottom: 17px;
+        }
+
+        .prob-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 7px;
+        }
+
+        .prob-name {
+            font-weight: bold;
+        }
+
+        .prob-value {
+            color: #aeb8c7;
+        }
+
+        .bar {
+            height: 11px;
+            background: #2b323e;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            background: #6f91e8;
+            border-radius: 10px;
+            transition: width 0.8s ease;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .info-box {
+            background: #171d27;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .info-box .value {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .info-box .label {
+            color: #8f99a8;
+            font-size: 13px;
+        }
+
+        .error {
+            display: none;
+            background: rgba(180,50,50,0.15);
+            border: 1px solid rgba(255,100,100,0.3);
+            color: #ffaaaa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        footer {
+            text-align: center;
+            color: #687386;
+            font-size: 13px;
+            margin-top: 25px;
+        }
+
+        @media (max-width: 700px) {
+            header h1 {
+                font-size: 30px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .activity {
+                font-size: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>Human Activity Detection</h1>
+        <p>CNN-LSTM based video activity recognition</p>
+    </header>
+
+    <div class="card">
+
+        <div class="upload-area" id="uploadArea">
+
+            <div class="upload-icon">🎥</div>
+
+            <h2>Upload a Video</h2>
+
+            <p>
+                Supported formats: AVI, MP4, MOV, MKV
+            </p>
+
+            <input
+                type="file"
+                id="videoInput"
+                accept=".avi,.mp4,.mov,.mkv"
+            >
+
+            <button
+                type="button"
+                onclick="document.getElementById('videoInput').click()"
+            >
+                Choose Video
+            </button>
+
+            <div class="file-name" id="fileName">
+                No video selected
+            </div>
+
+        </div>
+
+        <button id="predictButton" disabled>
+            Analyze Activity
+        </button>
+
+        <div class="loading" id="loading">
+
+            <div class="spinner"></div>
+
+            <p>Analyzing video with CNN-LSTM...</p>
+
+        </div>
+
+        <div class="error" id="error"></div>
+
+    </div>
+
+
+    <div class="card result" id="result">
+
+        <div class="prediction">
+
+            <div class="prediction-label">
+                Predicted Activity
+            </div>
+
+            <div class="activity" id="activity">
+                —
+            </div>
+
+            <div class="confidence" id="confidence">
+                —
+            </div>
+
+        </div>
+
+
+        <h2 class="section-title">
+            Class Probabilities
+        </h2>
+
+        <div id="probabilities"></div>
+
+
+        <h2 class="section-title" style="margin-top:30px;">
+            Model Information
+        </h2>
+
+        <div class="info-grid">
+
+            <div class="info-box">
+                <div class="value">CNN-LSTM</div>
+                <div class="label">Architecture</div>
+            </div>
+
+            <div class="info-box">
+                <div class="value">83.75%</div>
+                <div class="label">Test Accuracy</div>
+            </div>
+
+            <div class="info-box">
+                <div class="value" id="device">
+                    —
+                </div>
+                <div class="label">Device</div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <footer>
+        Human Activity Recognition • MobileNetV3-Small + LSTM
+    </footer>
+
+</div>
+
+
+<script>
+
+const API_URL = "";
+
+const videoInput = document.getElementById("videoInput");
+const fileName = document.getElementById("fileName");
+const predictButton = document.getElementById("predictButton");
+const loading = document.getElementById("loading");
+const result = document.getElementById("result");
+const errorBox = document.getElementById("error");
+
+let selectedFile = null;
+
+
+videoInput.addEventListener("change", function () {
+
+    if (this.files.length === 0) {
+        selectedFile = null;
+        fileName.textContent = "No video selected";
+        predictButton.disabled = true;
+        return;
+    }
+
+    selectedFile = this.files[0];
+
+    fileName.textContent = selectedFile.name;
+
+    predictButton.disabled = false;
+
+    result.style.display = "none";
+
+    errorBox.style.display = "none";
+
+});
+
+
+predictButton.addEventListener("click", async function () {
+
+    if (!selectedFile) {
+        return;
+    }
+
+    loading.style.display = "block";
+
+    predictButton.disabled = true;
+
+    result.style.display = "none";
+
+    errorBox.style.display = "none";
+
+
+    const formData = new FormData();
+
+    formData.append("file", selectedFile);
+
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/predict`,
+            {
+                method: "POST",
+                body: formData
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Prediction failed."
+            );
+        }
+
+
+        displayResult(data);
+
+
+    } catch (error) {
+
+        errorBox.textContent =
+            "Error: " + error.message;
+
+        errorBox.style.display = "block";
+
+    }
+
+
+    loading.style.display = "none";
+
+    predictButton.disabled = false;
+
+});
+
+
+function displayResult(data) {
+
+    result.style.display = "block";
+
+
+    document.getElementById("activity").textContent =
+        data.activity;
+
+
+    const confidence =
+        Number(data.confidence);
+
+
+    document.getElementById("confidence").textContent =
+        confidence.toFixed(2) + "%";
+
+
+    document.getElementById("device").textContent =
+        data.device || "CPU";
+
+
+    const probabilitiesContainer =
+        document.getElementById("probabilities");
+
+
+    probabilitiesContainer.innerHTML = "";
+
+
+    const probabilities =
+        data.probabilities || {};
+
+
+    Object.entries(probabilities).forEach(
+        ([name, value]) => {
+
+            const probability =
+                Number(value);
+
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "probability";
+
+
+            row.innerHTML = `
+                <div class="prob-header">
+                    <span class="prob-name">
+                        ${name}
+                    </span>
+
+                    <span class="prob-value">
+                        ${probability.toFixed(2)}%
+                    </span>
+                </div>
+
+                <div class="bar">
+                    <div
+                        class="bar-fill"
+                        style="width:${probability}%"
+                    ></div>
+                </div>
+            `;
+
+
+            probabilitiesContainer.appendChild(row);
+
+        }
+    );
+
+}
+
+</script>
+
+</body>
+</html>
